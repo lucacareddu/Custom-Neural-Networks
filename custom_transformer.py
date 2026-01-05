@@ -79,8 +79,8 @@ def generate_dataset(n_samples):
     return X, y
 
 # Generate datasets
-X_train, y_train = generate_dataset(n_train)
-X_val, y_val = generate_dataset(n_val)
+X_train, Y_train = generate_dataset(n_train)
+X_val, Y_val = generate_dataset(n_val)
 
 # print(torch.bincount(y_train))
 
@@ -119,49 +119,49 @@ X_val, y_val = generate_dataset(n_val)
 
 # -------- Models --------
 
-# Inherit from Function
-class CustomFunction(Function):
+# # Inherit from Function
+# class CustomFunction(Function):
 
-    # Note that forward, setup_context, and backward are @staticmethods
-    @staticmethod
-    def forward(input, labels, *parameters):
-        # output = input.mm(weight.t())
-        # if bias is not None:
-        #     output += bias.unsqueeze(0).expand_as(output)
-        # return output
-        pass
+#     # Note that forward, setup_context, and backward are @staticmethods
+#     @staticmethod
+#     def forward(input, labels, *parameters):
+#         # output = input.mm(weight.t())
+#         # if bias is not None:
+#         #     output += bias.unsqueeze(0).expand_as(output)
+#         # return output
+#         pass
 
-    @staticmethod
-    # inputs is a Tuple of all of the inputs passed to forward.
-    # output is the output of the forward().
-    def setup_context(ctx, inputs, output):
-        ctx.params = {}
-        input, weight, bias = inputs
-        ctx.save_for_backward(input, weight, bias)
+#     @staticmethod
+#     # inputs is a Tuple of all of the inputs passed to forward.
+#     # output is the output of the forward().
+#     def setup_context(ctx, inputs, output):
+#         ctx.params = {}
+#         input, weight, bias = inputs
+#         ctx.save_for_backward(input, weight, bias)
 
-    # This function has only a single output, so it gets only one gradient
-    @staticmethod
-    def backward(ctx, grad_output):
-        # This is a pattern that is very convenient - at the top of backward
-        # unpack saved_tensors and initialize all gradients w.r.t. inputs to
-        # None. Thanks to the fact that additional trailing Nones are
-        # ignored, the return statement is simple even when the function has
-        # optional inputs.
-        input, weight, bias = ctx.saved_tensors
-        grad_input = grad_weight = grad_bias = None
+#     # This function has only a single output, so it gets only one gradient
+#     @staticmethod
+#     def backward(ctx, grad_output):
+#         # This is a pattern that is very convenient - at the top of backward
+#         # unpack saved_tensors and initialize all gradients w.r.t. inputs to
+#         # None. Thanks to the fact that additional trailing Nones are
+#         # ignored, the return statement is simple even when the function has
+#         # optional inputs.
+#         input, weight, bias = ctx.saved_tensors
+#         grad_input = grad_weight = grad_bias = None
 
-        # These needs_input_grad checks are optional and there only to
-        # improve efficiency. If you want to make your code simpler, you can
-        # skip them. Returning gradients for inputs that don't require it is
-        # not an error.
-        if ctx.needs_input_grad[0]:
-            grad_input = grad_output.mm(weight)
-        if ctx.needs_input_grad[1]:
-            grad_weight = grad_output.t().mm(input)
-        if bias is not None and ctx.needs_input_grad[2]:
-            grad_bias = grad_output.sum(0)
+#         # These needs_input_grad checks are optional and there only to
+#         # improve efficiency. If you want to make your code simpler, you can
+#         # skip them. Returning gradients for inputs that don't require it is
+#         # not an error.
+#         if ctx.needs_input_grad[0]:
+#             grad_input = grad_output.mm(weight)
+#         if ctx.needs_input_grad[1]:
+#             grad_weight = grad_output.t().mm(input)
+#         if bias is not None and ctx.needs_input_grad[2]:
+#             grad_bias = grad_output.sum(0)
 
-        return grad_input, grad_weight, grad_bias
+#         return grad_input, grad_weight, grad_bias
 
 
 class CustomTransformer(nn.Module):
@@ -199,7 +199,7 @@ class CustomTransformer(nn.Module):
 
         epsilon = 1e-7
 
-        h_pre1 = (X -X.mean(dim=-1, keepdim=True)) / (X.std(dim=-1, keepdim=True) + epsilon)
+        h_pre1 = (X - X.mean()) / (X.std() + epsilon)
         h_1 = h_pre1 @ self.W1
         h_pre2 = torch.concat([h_1, self.cls_tok.unsqueeze(0).unsqueeze(0).expand(B,1,-1)], dim=1)
         Q, K, V = h_pre2 @ self.W_q, h_pre2 @ self.W_k, h_pre2 @ self.W_v
@@ -215,7 +215,7 @@ class CustomTransformer(nn.Module):
 
         # loss = - torch.mean(torch.sum(y * log_s, dim=-1))
 
-        loss = - log_s.gather(1, y.unsqueeze(1)).squeeze(1).mean() # compute the same as above but more efficiently
+        loss = - log_s.gather(1, y.unsqueeze(1)).squeeze(1).mean() # computes the same as above but more efficiently
 
         return_tensors = {
             "h_pre1": h_pre1.detach(),
@@ -242,7 +242,7 @@ def backward(X, y, named_parameters, named_forward_tensors):
 
     y = torch.nn.functional.one_hot(y, 2)
 
-    # ---< Partial derivatives >---
+    # ---< Intermediate >---
 
     dL_z = (t["s"] - y).unsqueeze(1)
     dL_h_2 = dL_z @ p["W2"].T
@@ -252,31 +252,31 @@ def backward(X, y, named_parameters, named_forward_tensors):
     # S * (g - g @ S.mT) / K_dim
     dL_QK = t["S"] * (dL_S - (dL_S * t["S"]).sum(dim=-1, keepdim=True)) / h_dim**0.5  # (B, seq_len, seq_len)
 
-    dL_K = dL_QK[:,-1:].mT @ t["Q"][:,-1]
+    dL_K = t["Q"][:,-1].unsqueeze(2) @ dL_QK[:,-1:]
     dL_Q = dL_QK[:,-1:] @ t["K"]
 
-    # ---< BACKPROPAGATION >---
+    # ---< Parameters >---
 
-    W2 = t["h_2"][:,-1].unsqueeze(2) @ dL_z
-    W_t = t["h_pre2"][:,-1].unsqueeze(2) @ dL_h_2
-    W_v = t["h_pre2"].mT @ dL_V
-    W_k = t["h_pre2"].mT @ dL_K.mT
-    W_q = t["h_pre2"][:,-1].unsqueeze(2) @ dL_Q
-    cls_tok = (dL_Q @ p["W_q"].T +
+    dL_W2 = t["h_2"][:,-1].unsqueeze(2) @ dL_z
+    dL_W_t = t["h_pre2"][:,-1].unsqueeze(2) @ dL_h_2
+    dL_W_v = t["h_pre2"].mT @ dL_V
+    dL_W_k = t["h_pre2"].mT @ dL_K.mT
+    dL_W_q = t["h_pre2"][:,-1].unsqueeze(2) @ dL_Q
+    dL_cls_tok = (dL_Q @ p["W_q"].T +
                dL_K.mT[:,-1:] @ p["W_k"].T +
                dL_V[:,-1:] @ p["W_v"].T +
                dL_h_2 @ p["W_t"].T)
-    W1 = (t["h_pre1"].mT @ dL_K.mT[:,:-1] @ p["W_k"].T +
+    dL_W1 = (t["h_pre1"].mT @ dL_K.mT[:,:-1] @ p["W_k"].T +
           t["h_pre1"].mT @ dL_V[:,:-1] @ p["W_v"].T)
 
     gradients = {
-        "W2": W2.mean(0),
-        "W_t": W_t.mean(0),
-        "W_v": W_v.mean(0),
-        "W_k": W_k.mean(0),
-        "W_q": W_q.mean(0),
-        "cls_tok": cls_tok.mean(0).squeeze(),
-        "W1": W1.mean(0),
+        "W2": dL_W2.mean(0),
+        "W_t": dL_W_t.mean(0),
+        "W_v": dL_W_v.mean(0),
+        "W_k": dL_W_k.mean(0),
+        "W_q": dL_W_q.mean(0),
+        "cls_tok": dL_cls_tok.mean(0).squeeze(),
+        "W1": dL_W1.mean(0),
         }
 
     return gradients
@@ -290,29 +290,41 @@ f = CustomTransformer()
 lr = 1e-3
 epochs = 100
 
-optim = torch.optim.SGD(f.parameters(), lr=lr)
+optim = torch.optim.SGD(f.parameters(), lr=lr) # used only for zero_grad()
+
+train_every = 1
+eval_every = 100
 
 for epoch in range(epochs):
-    train_loss, train_tensors = f(X_train, y_train)
+    loss_train, tensors_train = f(X_train, Y_train)
 
-    train_loss.backward()
-    print(train_loss)
+    if (epoch+1) % train_every == 0:
+        pred_train = tensors_train["s"]
+        mAcc_train = (torch.argmax(pred_train, dim=-1) == Y_train).float().mean()
+        print(f"Epoch {epoch+1} -> loss: {loss_train.item()}, mAcc: {mAcc_train.item()}")
+
+    # Autograd
+    loss_train.backward()
 
     with torch.no_grad():
-        gradients = backward(X_train, y_train, f.named_parameters(), train_tensors)
+        # Ours
+        gradients = backward(X_train, Y_train, f.named_parameters(), tensors_train)
         
         for n, p in f.named_parameters():
+
+            # Gradients correctness assessment
             if not torch.allclose(p.grad, gradients[n], atol=1e-6):
                 print(epoch, n)
+            
+            # Gradient Descent
             p -= lr * gradients[n]
 
-        # val_loss, val_tensors = f(X_val, y_val)
-
-        # mAcc = (torch.argmax(val_tensors["s"], dim=-1) == y_val).float().mean()
-        # print(mAcc.item())
+        # Evaluation on test set
+        if (epoch+1) % eval_every == 0:
+            loss_val, tensors_val = f(X_val, Y_val)
+            pred_val = tensors_val["s"]
+            mAcc_val = (torch.argmax(pred_val, dim=-1) == Y_val).float().mean()
+            print(f"    Eval (Train/Val) - Epoch {epoch+1} -> loss: {loss_train.item()}/{loss_val.item()}, mAcc: {mAcc_train.item()}/{mAcc_val.item()}")
 
     # optim.step()
     optim.zero_grad()
-
-    # if (epoch+1) % 1 == 0:
-    #     print(f"Epoch {epoch+1} -> loss: {loss.item()}, acc: {acc}")
