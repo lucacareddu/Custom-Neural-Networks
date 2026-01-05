@@ -1,10 +1,10 @@
+import math
 import random
 import numpy as np
 
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset
-
+from torch.autograd import Function
 
 def set_deterministic(seed=42):
     random.seed(seed)
@@ -16,157 +16,303 @@ def set_deterministic(seed=42):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.enabled = False
+
 seed = 42 # any number 
 set_deterministic(seed=seed)
 
 
-class TimeSeriesDataset(Dataset):
-    """
-    Synthetic multivariate time-series dataset (>=4 features)
-    with meaningful class-dependent patterns.
+# -------- Data --------
+
+time_steps = 100
+num_features = 8
+n_train = 1024
+n_val = 100
+
+def generate_dataset(n_samples):
+    X = torch.zeros(n_samples, time_steps, num_features)
+    y = torch.zeros(n_samples, dtype=torch.long)
+
+    t = torch.linspace(0, 1, time_steps)
+
+    for i in range(n_samples):
+        # Latent regime
+        regime = torch.randint(0, 2, (1,)).item()
+
+        # Base signals
+        trend = torch.randn(1) * t
+        seasonality = torch.sin(2 * math.pi * (t * (2 + torch.rand(1))))
+
+        # Autoregressive components
+        ar = torch.zeros(time_steps)
+        ar[0] = torch.randn(1)
+        for k in range(1, time_steps):
+            ar[k] = 0.8 * ar[k - 1] + 0.2 * torch.randn(1)
+
+        # Feature construction
+        X[i, :, 0] = ar + 0.1 * torch.randn(time_steps)
+        X[i, :, 1] = seasonality + 0.1 * torch.randn(time_steps)
+        X[i, :, 2] = trend + 0.1 * torch.randn(time_steps)
+        X[i, :, 3] = ar * seasonality
+        X[i, :, 4] = torch.randn(time_steps)
+
+        # Event-based feature (rare spike)
+        event_time = torch.randint(10, time_steps - 10, (1,))
+        X[i, event_time:event_time+3, 5] += torch.randn(3) * 3
+
+        # Regime-dependent features
+        if regime == 1:
+            X[i, :, 6] = torch.cos(4 * math.pi * t) + 0.2 * ar
+            X[i, :, 7] = 0.5 * trend + 0.3 * seasonality
+        else:
+            X[i, :, 6] = torch.sin(6 * math.pi * t) - 0.2 * ar
+            X[i, :, 7] = -0.3 * trend
+
+        # Label logic (delayed + interaction-based)
+        signal = (
+            X[i, 40:, 0].mean() +
+            0.5 * X[i, :, 3].std() +
+            0.8 * X[i, :, 5].max()
+        )
+
+        y[i] = 1 if signal > 1.0 else 0
+
+    return X, y
+
+# Generate datasets
+X_train, y_train = generate_dataset(n_train)
+X_val, y_val = generate_dataset(n_val)
+
+# print(torch.bincount(y_train))
+
+
+# import matplotlib.pyplot as plt
+
+# features = X_train.shape[2]
+
+# # Combine all data (train + val) or just use X_train
+# X = X_train
+# y = y_train
+
+# # Indices for each class
+# class0_idx = (y == 0).nonzero(as_tuple=True)[0]
+# class1_idx = (y == 1).nonzero(as_tuple=True)[0]
+
+# # Create figure
+# fig, axes = plt.subplots(features, 2, figsize=(12, 2*features), sharex=True)
+
+# for f in range(features):
+#     # Class 0
+#     for idx in class0_idx[:50]:  # plot first 50 samples lightly
+#         axes[f, 0].plot(X[idx, :, f], color='blue', alpha=0.2)
+#     axes[f, 0].plot(X[class0_idx, :, f].mean(0), color='blue', linewidth=2)
+#     axes[f, 0].set_title(f"Feature {f} | Class 0")
     
-    Each sample shape: (seq_len, num_features)
-    Label: 0 or 1
-    """
+#     # Class 1
+#     for idx in class1_idx[:50]:
+#         axes[f, 1].plot(X[idx, :, f], color='red', alpha=0.2)
+#     axes[f, 1].plot(X[class1_idx, :, f].mean(0), color='red', linewidth=2)
+#     axes[f, 1].set_title(f"Feature {f} | Class 1")
 
-    def __init__(self, num_samples=1000, seq_len=100, num_features=4):
-        self.num_samples = num_samples
-        self.seq_len = seq_len
-        self.num_features = num_features
-
-        self.X, self.y = self._generate_dataset()
-
-    def _generate_class0(self):
-        """
-        Class 0: low frequency + downward trend + mild noise
-        """
-        t = np.linspace(0, 2*np.pi, self.seq_len)
-        
-        v0 = 0.7 * np.sin(1 * t)                      # slower sine wave
-        v1 = np.linspace(1, 0.2, self.seq_len)        # downward trend
-        v2 = 0.2 * np.sin(0.5*t + 1)                  # correlated slow wave
-        v3 = np.random.normal(0, 0.05, self.seq_len)  # noise variable
-
-        X = np.stack([v0, v1, v2, v3], axis=1)
-
-        # additional noisy features if needed
-        if self.num_features > 4:
-            extra = np.random.normal(0, 0.05, (self.seq_len, self.num_features - 4))
-            X = np.concatenate([X, extra], axis=1)
-
-        return X
-
-    def _generate_class1(self):
-        """
-        Class 1: higher frequency + upward trend + event spikes
-        """
-        t = np.linspace(0, 4*np.pi, self.seq_len)
-
-        v0 = 1.0 * np.sin(3 * t)                      # faster sine wave
-        v1 = np.linspace(0.2, 1.2, self.seq_len)      # upward trend
-        v2 = 0.3 * np.sin(2*t + 0.5)                  # correlated faster wave
-        v3 = np.random.normal(0, 0.05, self.seq_len)
-
-        # Add event spikes (makes class 1 very learnable)
-        spike_positions = np.random.choice(self.seq_len, 3, replace=False)
-        v0[spike_positions] += np.random.uniform(2, 4, 3)
-        v2[spike_positions] += np.random.uniform(1, 3, 3)
-
-        X = np.stack([v0, v1, v2, v3], axis=1)
-
-        if self.num_features > 4:
-            extra = np.random.normal(0, 0.05, (self.seq_len, self.num_features - 4))
-            X = np.concatenate([X, extra], axis=1)
-
-        return X
-
-    def _generate_dataset(self):
-        X_list = []
-        y_list = []
-
-        for _ in range(self.num_samples):
-            label = np.random.randint(0, 2)
-
-            if label == 0:
-                x = self._generate_class0()
-            else:
-                x = self._generate_class1()
-
-            X_list.append(x)
-            y_list.append(label)
-
-        X = torch.tensor(np.array(X_list), dtype=torch.float32)
-        y = torch.tensor(np.array(y_list), dtype=torch.long)
-        return X, y
-
-    def __len__(self):
-        return self.num_samples
-
-    def __getitem__(self, idx):
-        return self.X, self.y
+# plt.tight_layout()
+# plt.show()
 
 
-class Mod(nn.Module):
+# -------- Models --------
+
+# Inherit from Function
+class CustomFunction(Function):
+
+    # Note that forward, setup_context, and backward are @staticmethods
+    @staticmethod
+    def forward(input, labels, *parameters):
+        # output = input.mm(weight.t())
+        # if bias is not None:
+        #     output += bias.unsqueeze(0).expand_as(output)
+        # return output
+        pass
+
+    @staticmethod
+    # inputs is a Tuple of all of the inputs passed to forward.
+    # output is the output of the forward().
+    def setup_context(ctx, inputs, output):
+        ctx.params = {}
+        input, weight, bias = inputs
+        ctx.save_for_backward(input, weight, bias)
+
+    # This function has only a single output, so it gets only one gradient
+    @staticmethod
+    def backward(ctx, grad_output):
+        # This is a pattern that is very convenient - at the top of backward
+        # unpack saved_tensors and initialize all gradients w.r.t. inputs to
+        # None. Thanks to the fact that additional trailing Nones are
+        # ignored, the return statement is simple even when the function has
+        # optional inputs.
+        input, weight, bias = ctx.saved_tensors
+        grad_input = grad_weight = grad_bias = None
+
+        # These needs_input_grad checks are optional and there only to
+        # improve efficiency. If you want to make your code simpler, you can
+        # skip them. Returning gradients for inputs that don't require it is
+        # not an error.
+        if ctx.needs_input_grad[0]:
+            grad_input = grad_output.mm(weight)
+        if ctx.needs_input_grad[1]:
+            grad_weight = grad_output.t().mm(input)
+        if bias is not None and ctx.needs_input_grad[2]:
+            grad_bias = grad_output.sum(0)
+
+        return grad_input, grad_weight, grad_bias
+
+
+class CustomTransformer(nn.Module):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        h_size = 32
-        self.h_size = h_size
+        i_dim = 8
+        h_dim = 32
+        o_dim = 2
 
-        self.W1 = nn.Linear(8,h_size, bias=False)
-        self.cls_tok = nn.Parameter(torch.randn(h_size))
-        self.W_q, self.W_k, self.W_v = nn.Linear(h_size,h_size, bias=False), nn.Linear(h_size,h_size, bias=False), nn.Linear(h_size,h_size, bias=False)
-        self.W2 = nn.Linear(h_size,1, bias=False)
+        self.i_dim = i_dim
+        self.h_dim = h_dim
+        self.o_dim = o_dim
 
-    def forward(self, waves):
-        B = waves.shape[0]
-        h_1 = self.W1(waves)
+        self.W1 = nn.Parameter(torch.empty((i_dim, h_dim)))
+        self.cls_tok = nn.Parameter(torch.randn(h_dim))
+        self.W_q, self.W_k, self.W_v = nn.Parameter(torch.empty((h_dim, h_dim))), nn.Parameter(torch.empty((h_dim, h_dim))), nn.Parameter(torch.empty((h_dim, h_dim)))
+        self.W_t = nn.Parameter(torch.empty((h_dim, h_dim)))
+        self.W2 = nn.Parameter(torch.empty((h_dim, o_dim)))
+        
+        torch.nn.init.trunc_normal_(self.W1)
+        torch.nn.init.trunc_normal_(self.cls_tok)
+        torch.nn.init.trunc_normal_(self.W_q)
+        torch.nn.init.trunc_normal_(self.W_k)
+        torch.nn.init.trunc_normal_(self.W_v)
+        torch.nn.init.trunc_normal_(self.W_t)
+        torch.nn.init.trunc_normal_(self.W2)
+
+        # self.fn = CustomFunction.apply
+
+    def forward(self, X, y):
+        # return self.fn(x, y, *self.named_parameters())
+
+        B = X.shape[0]
+
+        epsilon = 1e-7
+
+        h_pre1 = (X -X.mean(dim=-1, keepdim=True)) / (X.std(dim=-1, keepdim=True) + epsilon)
+        h_1 = h_pre1 @ self.W1
         h_pre2 = torch.concat([h_1, self.cls_tok.unsqueeze(0).unsqueeze(0).expand(B,1,-1)], dim=1)
-        Q, K, V = self.W_q(h_pre2), self.W_k(h_pre2), self.W_v(h_pre2)
-        scores = torch.nn.functional.softmax(Q @ K.mT/ (self.h_size**0.5), dim=-1)
-        h_2 = (scores @ V) + h_pre2
-        z = self.W2(h_2[:,-1])
-        return h_1.detach(), h_pre2.detach(), Q.detach(), K.detach(), V.detach(), scores.detach(), h_2.detach(), z.squeeze()
+        Q, K, V = h_pre2 @ self.W_q, h_pre2 @ self.W_k, h_pre2 @ self.W_v
+        S = torch.nn.functional.softmax(Q @ K.mT / self.h_dim**0.5, dim=-1)
+        T = h_pre2 @ self.W_t
+        h_2 = S @ V + T
+        z = h_2[:,-1] @ self.W2
+
+        log_s = torch.nn.functional.log_softmax(z, dim=-1) # log-sum-exp trick
+
+        # if self.K > 1 and not y.dim() > 1:
+        #     y = torch.nn.functional.one_hot(y, 2)
+
+        # loss = - torch.mean(torch.sum(y * log_s, dim=-1))
+
+        loss = - log_s.gather(1, y.unsqueeze(1)).squeeze(1).mean() # compute the same as above but more efficiently
+
+        return_tensors = {
+            "h_pre1": h_pre1.detach(),
+            "h_1": h_1.detach(),
+            "h_pre2": h_pre2.detach(),
+            "Q": Q.detach(),
+            "K": K.detach(),
+            "V": V.detach(),
+            "S": S.detach(),
+            "T": T.detach(),
+            "h_2": h_2.detach(),
+            "z": z.detach(),
+            "s": log_s.detach().exp()
+        }
+
+        return loss, return_tensors
 
 
-dataset = TimeSeriesDataset(
-    num_samples=128,
-    seq_len=256,
-    num_features=8
-)
+def backward(X, y, named_parameters, named_forward_tensors):
+    p = dict(named_parameters)
+    t = dict(named_forward_tensors)
 
-waves, labels = dataset[0]
-waves = (waves - waves.mean()) / (waves.std() + 1e-7)
+    h_dim = t["K"].shape[-1]
 
-f = Mod()
+    y = torch.nn.functional.one_hot(y, 2)
 
-bce_loss = torch.nn.BCEWithLogitsLoss()
-optim = torch.optim.SGD(f.parameters(), lr=1)
+    # ---< Partial derivatives >---
+
+    dL_z = (t["s"] - y).unsqueeze(1)
+    dL_h_2 = dL_z @ p["W2"].T
+    dL_V = t["S"][:,-1].unsqueeze(2) @ dL_h_2
+    dL_S = dL_h_2 @ t["V"].mT
+
+    # S * (g - g @ S.mT) / K_dim
+    dL_QK = t["S"] * (dL_S - (dL_S * t["S"]).sum(dim=-1, keepdim=True)) / h_dim**0.5  # (B, seq_len, seq_len)
+
+    dL_K = dL_QK[:,-1:].mT @ t["Q"][:,-1]
+    dL_Q = dL_QK[:,-1:] @ t["K"]
+
+    # ---< BACKPROPAGATION >---
+
+    W2 = t["h_2"][:,-1].unsqueeze(2) @ dL_z
+    W_t = t["h_pre2"][:,-1].unsqueeze(2) @ dL_h_2
+    W_v = t["h_pre2"].mT @ dL_V
+    W_k = t["h_pre2"].mT @ dL_K.mT
+    W_q = t["h_pre2"][:,-1].unsqueeze(2) @ dL_Q
+    cls_tok = (dL_Q @ p["W_q"].T +
+               dL_K.mT[:,-1:] @ p["W_k"].T +
+               dL_V[:,-1:] @ p["W_v"].T +
+               dL_h_2 @ p["W_t"].T)
+    W1 = (t["h_pre1"].mT @ dL_K.mT[:,:-1] @ p["W_k"].T +
+          t["h_pre1"].mT @ dL_V[:,:-1] @ p["W_v"].T)
+
+    gradients = {
+        "W2": W2.mean(0),
+        "W_t": W_t.mean(0),
+        "W_v": W_v.mean(0),
+        "W_k": W_k.mean(0),
+        "W_q": W_q.mean(0),
+        "cls_tok": cls_tok.mean(0).squeeze(),
+        "W1": W1.mean(0),
+        }
+
+    return gradients
+
+
+f = CustomTransformer()
 
 
 # -------- Training loop --------
-for epoch in range(300):
-    h_1, h_pre2, Q, K, V, scores, h_2, z = f(waves)
-    
-    loss = bce_loss(z, labels.float())
-    loss.backward()
 
-    # ours vs autograd
+lr = 1e-3
+epochs = 100
+
+optim = torch.optim.SGD(f.parameters(), lr=lr)
+
+for epoch in range(epochs):
+    train_loss, train_tensors = f(X_train, y_train)
+
+    train_loss.backward()
+    print(train_loss)
+
     with torch.no_grad():
+        gradients = backward(X_train, y_train, f.named_parameters(), train_tensors)
         
-        W2_grad = h_2[:,-1][:,:,None] @ (z - labels)[:,None,None]
-        print("Mine: ",W2_grad.mean(dim=0).T)
-        print("Torch: ",f.W2.weight.grad)
-        
-        # f.W2.weight = torch.nn.Parameter(f.W2.weight - 1 * W2_grad.mean(dim=0).T)
+        for n, p in f.named_parameters():
+            if not torch.allclose(p.grad, gradients[n], atol=1e-6):
+                print(epoch, n)
+            p -= lr * gradients[n]
 
-        # Wk_grad = h_pre2.mT @ scores[:,-1].unsqueeze(-1) @ ((z - labels)[:,None,None] @ f.W2.weight)
-        # f.W_k.weight = torch.nn.Parameter(f.W_k.weight - 1 * Wk_grad.mean(dim=0).T)
+        # val_loss, val_tensors = f(X_val, y_val)
+
+        # mAcc = (torch.argmax(val_tensors["s"], dim=-1) == y_val).float().mean()
+        # print(mAcc.item())
 
     # optim.step()
     optim.zero_grad()
 
-    acc = ((torch.sigmoid(z) > 0.5).long() == labels).float().mean()
-
-    if (epoch+1) % 1 == 0:
-        print(f"Epoch {epoch+1} -> loss: {loss.item()}, acc: {acc}")
+    # if (epoch+1) % 1 == 0:
+    #     print(f"Epoch {epoch+1} -> loss: {loss.item()}, acc: {acc}")

@@ -59,7 +59,7 @@ def forward(X, Y):
     a2 = pre_a2 @ W2.T + B2 # == (w2 @ pre_a2.mT).mT
 
     if K > 1:
-        s = torch.softmax(a2 + 1e-7, dim=1)
+        s = torch.softmax(a2, dim=1)
     else:
         s = torch.sigmoid(a2)
         s = torch.concat([s, 1-s], dim=1)
