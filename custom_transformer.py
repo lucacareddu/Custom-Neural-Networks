@@ -1,3 +1,6 @@
+# Implementation of backpropagation for a custom Transformer Encoder (1-layer)
+# to solve time series classification via class-token prediction
+
 import math
 import random
 import numpy as np
@@ -202,9 +205,8 @@ class CustomTransformer(nn.Module):
         h_pre1 = (X - X.mean()) / (X.std() + epsilon)
         h_1 = h_pre1 @ self.W1
         h_pre2 = torch.concat([h_1, self.cls_tok.unsqueeze(0).unsqueeze(0).expand(B,1,-1)], dim=1)
-        Q, K, V = h_pre2 @ self.W_q, h_pre2 @ self.W_k, h_pre2 @ self.W_v
+        Q, K, V, T = h_pre2 @ self.W_q, h_pre2 @ self.W_k, h_pre2 @ self.W_v, h_pre2 @ self.W_t
         S = torch.nn.functional.softmax(Q @ K.mT / self.h_dim**0.5, dim=-1)
-        T = h_pre2 @ self.W_t
         h_2 = S @ V + T
         z = h_2[:,-1] @ self.W2
 
@@ -246,28 +248,29 @@ def backward(X, y, named_parameters, named_forward_tensors):
 
     dL_z = (t["s"] - y).unsqueeze(1)
     dL_h_2 = dL_z @ p["W2"].T
-    dL_V = t["S"][:,-1].unsqueeze(2) @ dL_h_2
+    dL_T = dL_h_2
+    dL_V = t["S"].mT[:,:,-1:] @ dL_h_2
     dL_S = dL_h_2 @ t["V"].mT
 
     # S * (g - g @ S.mT) / K_dim
     dL_QK = t["S"] * (dL_S - (dL_S * t["S"]).sum(dim=-1, keepdim=True)) / h_dim**0.5  # (B, seq_len, seq_len)
 
-    dL_K = t["Q"][:,-1].unsqueeze(2) @ dL_QK[:,-1:]
+    dL_K = dL_QK.mT[:,:,-1:] @ t["Q"][:,-1:]
     dL_Q = dL_QK[:,-1:] @ t["K"]
 
     # ---< Parameters >---
 
-    dL_W2 = t["h_2"][:,-1].unsqueeze(2) @ dL_z
-    dL_W_t = t["h_pre2"][:,-1].unsqueeze(2) @ dL_h_2
+    dL_W2 = t["h_2"].mT[:,:,-1:] @ dL_z
+    dL_W_t = t["h_pre2"].mT[:,:,-1:] @ dL_T
     dL_W_v = t["h_pre2"].mT @ dL_V
-    dL_W_k = t["h_pre2"].mT @ dL_K.mT
-    dL_W_q = t["h_pre2"][:,-1].unsqueeze(2) @ dL_Q
+    dL_W_k = t["h_pre2"].mT @ dL_K
+    dL_W_q = t["h_pre2"].mT[:,:,-1:] @ dL_Q
     dL_cls_tok = (dL_Q @ p["W_q"].T +
-               dL_K.mT[:,-1:] @ p["W_k"].T +
-               dL_V[:,-1:] @ p["W_v"].T +
-               dL_h_2 @ p["W_t"].T)
-    dL_W1 = (t["h_pre1"].mT @ dL_K.mT[:,:-1] @ p["W_k"].T +
-          t["h_pre1"].mT @ dL_V[:,:-1] @ p["W_v"].T)
+                  dL_K[:,-1:] @ p["W_k"].T +
+                  dL_V[:,-1:] @ p["W_v"].T +
+                  dL_T @ p["W_t"].T)
+    dL_W1 = (t["h_pre1"].mT @ dL_K[:,:-1] @ p["W_k"].T +
+             t["h_pre1"].mT @ dL_V[:,:-1] @ p["W_v"].T)
 
     gradients = {
         "W2": dL_W2.mean(0),

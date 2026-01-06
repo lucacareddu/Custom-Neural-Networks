@@ -1,3 +1,6 @@
+# Implementation of backpropagation for a custom vanilla NN 
+# to solve time series classification
+
 import random
 import numpy as np
 import torch
