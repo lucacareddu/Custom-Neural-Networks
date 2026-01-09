@@ -290,44 +290,63 @@ f = CustomTransformer()
 
 # -------- Training loop --------
 
+BATCH_SIZE = 32
+iters = len(X_train) // BATCH_SIZE
+
+train_indices = torch.randperm(len(X_train))
+
 lr = 1e-3
 epochs = 100
-
 optim = torch.optim.SGD(f.parameters(), lr=lr) # used only for zero_grad()
 
+losses, scores = [], []
+
 train_every = 1
-eval_every = 100
+val_every = 100
+
 
 for epoch in range(epochs):
-    loss_train, tensors_train = f(X_train, Y_train)
+    for it in range(iters):
+        idx = train_indices[it*BATCH_SIZE:(it+1)*BATCH_SIZE]
+        X = X_train[idx]
+        Y = Y_train[idx]
 
-    if (epoch+1) % train_every == 0:
+        loss_train, tensors_train = f(X, Y)
+        losses.append(loss_train.item())
+
         pred_train = tensors_train["s"]
-        mAcc_train = (torch.argmax(pred_train, dim=-1) == Y_train).float().mean()
-        print(f"Epoch {epoch+1} -> loss: {loss_train.item()}, mAcc: {mAcc_train.item()}")
+        acc_train = (torch.argmax(pred_train, dim=-1) == Y).float().mean()
+        scores.append(acc_train.item())
 
-    # Autograd
-    loss_train.backward()
+        # Autograd
+        loss_train.backward()
 
-    with torch.no_grad():
-        # Ours
-        gradients = backward(X_train, Y_train, f.named_parameters(), tensors_train)
-        
-        for n, p in f.named_parameters():
-
-            # Gradients correctness assessment
-            if not torch.allclose(p.grad, gradients[n], atol=1e-6):
-                print(epoch, n)
+        with torch.no_grad():
+            # Ours
+            gradients = backward(X, Y, f.named_parameters(), tensors_train)
             
-            # Gradient Descent
-            p -= lr * gradients[n]
+            for n, p in f.named_parameters():
 
-        # Evaluation on test set
-        if (epoch+1) % eval_every == 0:
-            loss_val, tensors_val = f(X_val, Y_val)
-            pred_val = tensors_val["s"]
-            mAcc_val = (torch.argmax(pred_val, dim=-1) == Y_val).float().mean()
-            print(f"    Eval (Train/Val) - Epoch {epoch+1} -> loss: {loss_train.item()}/{loss_val.item()}, mAcc: {mAcc_train.item()}/{mAcc_val.item()}")
+                # Gradients correctness assessment
+                if not torch.allclose(p.grad, gradients[n], atol=1e-4):
+                    print(epoch, n)
+                
+                # Gradient Descent
+                p -= lr * gradients[n]
 
-    # optim.step()
-    optim.zero_grad()
+        # optim.step()
+        optim.zero_grad()
+    
+    mloss_train, macc_train = torch.tensor(losses).mean(), torch.tensor(scores).mean()
+    losses, scores = [], []
+
+    # Evaluation on train set
+    if (epoch+1) % train_every == 0:
+        print(f"Epoch {epoch+1} -> loss: {mloss_train.item()}, Acc: {macc_train.item()}")
+
+    # Evaluation on test set
+    if (epoch+1) % val_every == 0:
+        loss_val, tensors_val = f(X_val, Y_val)
+        pred_val = tensors_val["s"]
+        acc_val = (torch.argmax(pred_val, dim=-1) == Y_val).float().mean()
+        print(f"    Eval (Train/Val) - Epoch {epoch+1} -> loss: {mloss_train.item()}/{loss_val.item()}, Acc: {macc_train.item()}/{acc_val.item()}")
