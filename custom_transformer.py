@@ -1,5 +1,5 @@
 # Implementation of backpropagation for a custom Transformer Encoder (1-layer)
-# to solve time series classification via class-token prediction
+# to solve time series classification (toy dataset) via class-token prediction
 
 import math
 import random

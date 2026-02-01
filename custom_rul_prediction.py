@@ -1,4 +1,5 @@
-# RUL prediction using a custom Transformer Encoder with manual backpropagation
+# RUL prediction (machine failure dataset) using a custom Transformer model
+# with manual backpropagation
 
 import math
 import random
@@ -140,13 +141,11 @@ class CustomTransformer(nn.Module):
         self.o_dim = o_dim
 
         self.W1 = nn.Parameter(torch.empty((i_dim, h_dim)))
-        # self.cls_tok = nn.Parameter(torch.randn(h_dim))
         self.W_q, self.W_k, self.W_v = nn.Parameter(torch.empty((h_dim, h_dim))), nn.Parameter(torch.empty((h_dim, h_dim))), nn.Parameter(torch.empty((h_dim, h_dim)))
         self.W_t = nn.Parameter(torch.empty((h_dim, h_dim)))
         self.W2 = nn.Parameter(torch.empty((h_dim, o_dim)))
         
         torch.nn.init.trunc_normal_(self.W1)
-        # torch.nn.init.trunc_normal_(self.cls_tok)
         torch.nn.init.trunc_normal_(self.W_q)
         torch.nn.init.trunc_normal_(self.W_k)
         torch.nn.init.trunc_normal_(self.W_v)
@@ -154,8 +153,6 @@ class CustomTransformer(nn.Module):
         torch.nn.init.trunc_normal_(self.W2)
 
     def forward(self, X, y):
-        # B = X.shape[0]
-
         mask = torch.all(X == 0, dim=-1)
         attn_mask = mask.unsqueeze(-1) | mask.unsqueeze(1)
         point_mask = (~mask).unsqueeze(-1)
@@ -166,28 +163,20 @@ class CustomTransformer(nn.Module):
         Q, K, V, T = h_pre2 @ self.W_q, h_pre2 @ self.W_k, h_pre2 @ self.W_v, h_pre2 @ self.W_t
 
         scores = Q @ K.mT / self.h_dim**0.5
-        scores_masked = scores.masked_fill(attn_mask, float('-inf'))
+        scores = scores.masked_fill(attn_mask, float('-inf'))
 
-        S = torch.nn.functional.softmax(scores_masked, dim=-1)
+        S = torch.nn.functional.softmax(scores, dim=-1)
         S = S.masked_fill(attn_mask, 0)
         
-        V_masked = V * point_mask.float()
-        h_2 = S @ V_masked + T
+        V = V * point_mask.float()
+        h_2 = S @ V + h_pre2
 
-        h_2_mean_masked = (h_2 * point_mask.float()).sum(dim=1) / point_mask.sum(dim=1)
+        h_2_mean = (h_2 * point_mask.float()).sum(dim=1) / point_mask.sum(dim=1)
+        z_pre = h_2_mean @ self.W2
 
-        z = nn.functional.relu(h_2_mean_masked @ self.W2)
+        z = nn.functional.relu(z_pre)
 
-        # log_s = torch.nn.functional.log_softmax(z, dim=-1) # log-sum-exp trick
-
-        # if self.K > 1 and not y.dim() > 1:
-        #     y = torch.nn.functional.one_hot(y, 2)
-
-        # loss = - torch.mean(torch.sum(y * log_s, dim=-1))
-
-        # loss = - log_s.gather(1, y.unsqueeze(1)).squeeze(1).mean() # computes the same as above but more efficiently
-
-        loss = 0.5 * (y - z.squeeze()).pow(2).mean()
+        loss = 0.5 * (y - z.squeeze()).pow(2).mean() # MSE
 
         return_tensors = {
             "h_pre1": h_pre1.detach(),
@@ -200,7 +189,6 @@ class CustomTransformer(nn.Module):
             "T": T.detach(),
             "h_2": h_2.detach(),
             "z": z.detach(),
-            # "s": log_s.detach().exp()
         }
 
         return loss, return_tensors
@@ -212,12 +200,10 @@ def backward(X, y, named_parameters, named_forward_tensors):
 
     h_dim = t["K"].shape[-1]
 
-    # y = torch.nn.functional.one_hot(y, 2)
     y = y.unsqueeze(1)
 
     # ---< Intermediate >---
 
-    # dL_z = (t["s"] - y).unsqueeze(1)
     dL_z = (t["z"] - y).unsqueeze(1)
     dL_h_2 = dL_z @ p["W2"].T
     dL_T = dL_h_2
@@ -289,11 +275,8 @@ for epoch in range(epochs):
         Y = Y_train[idx]
 
         loss_train, tensors_train = f(X, Y)
-        losses.append(loss_train.item())
 
-        # pred_train = tensors_train["s"]
-        # acc_train = (torch.argmax(pred_train, dim=-1) == Y).float().mean()
-        # scores.append(acc_train.item())
+        losses.append(loss_train.item())
         scores.append(math.sqrt(loss_train.item()))
 
         # Autograd
@@ -315,6 +298,7 @@ for epoch in range(epochs):
         # #         momentum_n_corrected = momentum[n] / (1 - alpha_mom ** ((epoch*iters)+it+1))
         # #         p -= lr * momentum_n_corrected
 
+        # Gradient Clipping
         torch.nn.utils.clip_grad_norm_(f.parameters(), 1)
 
         optim.step()
@@ -330,9 +314,8 @@ for epoch in range(epochs):
     # Evaluation on test set
     if (epoch+1) % val_every == 0:
         loss_val, tensors_val = f(X_test, Y_test)
-        # pred_val = tensors_val["s"]
-        # acc_val = (torch.argmax(pred_val, dim=-1) == Y_test).float().mean()
         rmse_val = math.sqrt(loss_val.item())
+
         print(f"    Eval (Train/Val) - Epoch {epoch+1} -> loss: {mloss_train.item()}/{loss_val.item()}, RMSE: {mrmse_train.item()}/{rmse_val}")
         
         # plot validation set distribution overlap

@@ -1,5 +1,5 @@
 # Implementation of backpropagation for a custom vanilla NN 
-# to solve time series classification
+# to solve time series classification (toy dataset)
 
 import random
 import numpy as np
