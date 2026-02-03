@@ -1,0 +1,7 @@
+archive.zip
+mlruns/
+mlflow.db
+plots
+requirements.txt
+environment.yml
+**/__pycache__/*

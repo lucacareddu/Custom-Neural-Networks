@@ -1,5 +1,12 @@
-# RUL prediction (machine failure dataset) using a custom Transformer model
-# with manual backpropagation
+''' 
+RUL prediction using a custom Transformer model with manual backpropagation.
+
+Machine Failure Dataset: https://www.kaggle.com/datasets/shashanknecrothapa/machine-failure-predictions/code
+'''
+
+import os
+import shutil
+import datetime
 
 import math
 import random
@@ -11,6 +18,11 @@ import torch.nn as nn
 
 import matplotlib.pyplot as plt
 import seaborn as sns
+
+import mlflow
+from mlflow.models.signature import infer_signature
+
+import logging
 
 
 def set_deterministic(seed=42):
@@ -24,8 +36,22 @@ def set_deterministic(seed=42):
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.enabled = False
 
+reproducible_run = True
 seed = 42 # any number 
-# set_deterministic(seed=seed)
+
+if reproducible_run:
+    set_deterministic(seed=seed)
+
+
+# -------- MLFlow Setup --------
+
+logger = logging.getLogger("mlflow")
+
+# Set log level to *
+logger.setLevel(logging.ERROR)
+
+mlflow.set_tracking_uri("sqlite:///mlflow.db")
+mlflow.set_experiment("RUL Estimation Demo")
 
 
 # -------- Data --------
@@ -246,7 +272,7 @@ def backward(X, y, named_parameters, named_forward_tensors):
 f = CustomTransformer()
 
 
-# -------- Training loop --------
+# -------- Optim parameters --------
 
 BATCH_SIZE = 32
 iters = len(X_train) // BATCH_SIZE
@@ -257,6 +283,9 @@ lr = 1e-2
 epochs = 100
 optim = torch.optim.AdamW(f.parameters(), lr=lr) # used only for zero_grad()
 
+grad_clip = True
+max_grad_norm = 1.0
+
 losses, scores = [], []
 
 # parameters_names = list(n for n,_ in f.named_parameters())
@@ -264,62 +293,129 @@ losses, scores = [], []
 # alpha_mom = 0.8
 # momentum = dict(zip(parameters_names, [0]*len(parameters_names)))
 
+
+# -------- Training loop --------
+
 train_every = 1
 val_every = 10
 
+# Log CPU, GPU, Disk and Network metrics
+mlflow.enable_system_metrics_logging()
 
-for epoch in range(epochs):
-    for it in range(iters):
-        idx = train_indices[it*BATCH_SIZE:(it+1)*BATCH_SIZE]
-        X = X_train[idx]
-        Y = Y_train[idx]
+timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
 
-        loss_train, tensors_train = f(X, Y)
+# Start an MLflow run
+with mlflow.start_run(run_name=timestamp):
 
-        losses.append(loss_train.item())
-        scores.append(math.sqrt(loss_train.item()))
+    mlflow_params = {
+        "reproducible_run": reproducible_run,
+        "seed": seed,
+        "min_cycles": min_cycles,
+        "target_seq_len": target_seq_len,
+        "input_dim": f.i_dim,
+        "hidden_dim": f.h_dim,
+        "batch_size": BATCH_SIZE,
+        "learning_rate": lr,
+        "epochs": epochs,
+        "optimizer": optim.__class__,
+        "grad_clip": grad_clip,
+        "max_grad_norm": max_grad_norm,
+    }
 
-        # Autograd
-        loss_train.backward()
+    # Log the hyperparameters
+    mlflow.log_params(mlflow_params)
 
-        # with torch.no_grad():
-        #     # Ours
-        #     gradients = backward(X, Y, f.named_parameters(), tensors_train)
-            
-        #     for n, p in f.named_parameters():
+    os.makedirs("plots", exist_ok=True) # temp dir for plots
 
-        #         # Gradients correctness assessment
-        #         if not torch.allclose(p.grad, gradients[n], atol=1e-4):
-        #             print(epoch, n)
+
+    for epoch in range(epochs):
+        for it in range(iters):
+            idx = train_indices[it*BATCH_SIZE:(it+1)*BATCH_SIZE]
+            X = X_train[idx]
+            Y = Y_train[idx]
+
+            loss_train, tensors_train = f(X, Y)
+
+            losses.append(loss_train.item())
+            scores.append(math.sqrt(loss_train.item()))
+
+            # Autograd
+            loss_train.backward()
+
+            # with torch.no_grad():
+            #     # Ours
+            #     gradients = backward(X, Y, f.named_parameters(), tensors_train)
                 
-        #         # Gradient Descent
-        #         p -= lr * gradients[n]
-        # #         momentum[n] = alpha_mom * momentum[n] + (1-alpha_mom) * gradients[n]
-        # #         momentum_n_corrected = momentum[n] / (1 - alpha_mom ** ((epoch*iters)+it+1))
-        # #         p -= lr * momentum_n_corrected
+            #     for n, p in f.named_parameters():
 
-        # Gradient Clipping
-        torch.nn.utils.clip_grad_norm_(f.parameters(), 1)
+            #         # Gradients correctness assessment
+            #         if not torch.allclose(p.grad, gradients[n], atol=1e-4):
+            #             print(epoch, n)
+                    
+            #         # Gradient Descent
+            #         p -= lr * gradients[n]
+            # #         momentum[n] = alpha_mom * momentum[n] + (1-alpha_mom) * gradients[n]
+            # #         momentum_n_corrected = momentum[n] / (1 - alpha_mom ** ((epoch*iters)+it+1))
+            # #         p -= lr * momentum_n_corrected
 
-        optim.step()
-        optim.zero_grad()
-    
-    mloss_train, mrmse_train = torch.tensor(losses).mean(), torch.tensor(scores).mean()
-    losses, scores = [], []
+            # Gradient Clipping
+            if grad_clip:
+                torch.nn.utils.clip_grad_norm_(f.parameters(), max_grad_norm)
 
-    # Evaluation on train set
-    if (epoch+1) % train_every == 0:
-        print(f"Epoch {epoch+1} -> loss: {mloss_train.item()}, RMSE: {mrmse_train.item()}")
-
-    # Evaluation on test set
-    if (epoch+1) % val_every == 0:
-        loss_val, tensors_val = f(X_test, Y_test)
-        rmse_val = math.sqrt(loss_val.item())
-
-        print(f"    Eval (Train/Val) - Epoch {epoch+1} -> loss: {mloss_train.item()}/{loss_val.item()}, RMSE: {mrmse_train.item()}/{rmse_val}")
+            optim.step()
+            optim.zero_grad()
         
-        # plot validation set distribution overlap
-        sns.histplot(Y_test, label="true")
-        sns.histplot(tensors_val["z"].squeeze(), label="pred")
-        plt.legend()
-        plt.show()
+        mloss_train, mrmse_train = torch.tensor(losses).mean(), torch.tensor(scores).mean()
+        losses, scores = [], []
+
+        # Evaluation on train set
+        if (epoch+1) % train_every == 0:
+            print(f"Epoch {epoch+1} -> loss: {mloss_train.item()}, RMSE: {mrmse_train.item()}")
+
+        # Evaluation on test set
+        if (epoch+1) % val_every == 0:
+            loss_val, tensors_val = f(X_test, Y_test)
+            rmse_val = math.sqrt(loss_val.item())
+
+            print(f"    Eval (Train/Val) - Epoch {epoch+1} -> loss: {mloss_train.item()}/{loss_val.item()}, RMSE: {mrmse_train.item()}/{rmse_val}")
+            
+            mlflow.log_metrics(
+                    {
+                        "train_loss": mloss_train.item(),
+                        "val_loss": loss_val.item(),
+                        "train_rmse": mrmse_train.item(),
+                        "val_rmse": rmse_val,
+                    },
+                    step=epoch+1
+                )
+
+            # plot validation set distribution overlap
+            sns.histplot(Y_test, label="true")
+            sns.histplot(tensors_val["z"].squeeze(), label="pred")
+            plt.legend()
+
+            plot_path = f"plots/epoch_{epoch+1}.png"
+            plt.savefig(plot_path)
+
+            # plt.show()
+
+            plt.close('all')
+
+            # Log the plot
+            mlflow.log_artifact(plot_path, artifact_path="plots")
+
+    # Log the model
+    in_sample = {"X": X_train[0].unsqueeze(0).numpy(), "y": Y_train[0].unsqueeze(0).numpy()}
+
+    with torch.no_grad():
+        out_sample = f(X_train[0].unsqueeze(0), Y_train[0].unsqueeze(0))
+        out_sample = {"forward_tensors": {n:t.numpy() for n,t in out_sample[1].items()}}
+
+    model_signature = infer_signature(in_sample, out_sample)
+
+    mlflow.pytorch.log_model(f, name=f"model_epoch_{epoch+1}", signature=model_signature, step=epoch+1)
+
+    try:
+        shutil.rmtree("plots")
+    except Exception as e:
+        print(f"Could not delete temporary plots dir: {e}).")
