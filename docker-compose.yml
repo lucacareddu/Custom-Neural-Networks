@@ -1,0 +1,27 @@
+services:
+  prefect:
+    image: appprefect:v1
+    environment:
+      - PREFECT_SERVER_API_HOST=0.0.0.0
+      - PREFECT_SERVER_API_PORT=4002
+    ports:
+      - "4002:4002"
+    networks:
+      - app-network
+
+  app:
+    image: appinfer:v1
+    ports:
+      - "8002:8002"
+    depends_on:
+      - prefect
+    # environment:
+    #   PREFECT_API_URL: http://prefect:4002/api
+    volumes:
+      - /home/luca/customnn/mlruns
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

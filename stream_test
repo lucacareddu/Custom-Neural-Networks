@@ -1,0 +1,482 @@
+[
+  {
+    "Type":"M",
+    "Air temperature [K]":298.1,
+    "Process temperature [K]":308.6,
+    "Rotational speed [rpm]":1551,
+    "Torque [Nm]":42.8,
+    "Tool wear [min]":0
+  },
+  {
+    "Type":"L",
+    "Air temperature [K]":298.2,
+    "Process temperature [K]":308.7,
+    "Rotational speed [rpm]":1408,
+    "Torque [Nm]":46.3,
+    "Tool wear [min]":3
+  },
+  {
+    "Type":"L",
+    "Air temperature [K]":298.1,
+    "Process temperature [K]":308.5,
+    "Rotational speed [rpm]":1498,
+    "Torque [Nm]":49.4,
+    "Tool wear [min]":5
+  },
+  {
+    "Type":"L",
+    "Air temperature [K]":298.2,
+    "Process temperature [K]":308.6,
+    "Rotational speed [rpm]":1433,
+    "Torque [Nm]":39.5,
+    "Tool wear [min]":7
+  },
+  {
+    "Type":"L",
+    "Air temperature [K]":298.2,
+    "Process temperature [K]":308.7,
+    "Rotational speed [rpm]":1408,
+    "Torque [Nm]":40.0,
+    "Tool wear [min]":9
+  },
+  {
+    "Type":"M",
+    "Air temperature [K]":298.1,
+    "Process temperature [K]":308.6,
+    "Rotational speed [rpm]":1425,
+    "Torque [Nm]":41.9,
+    "Tool wear [min]":11
+  },
+  {
+    "Type":"L",
+    "Air temperature [K]":298.1,
+    "Process temperature [K]":308.6,
+    "Rotational speed [rpm]":1558,
+    "Torque [Nm]":42.4,
+    "Tool wear [min]":14
+  },
+  {
+    "Type":"L",
+    "Air temperature [K]":298.1,
+    "Process temperature [K]":308.6,
+    "Rotational speed [rpm]":1527,
+    "Torque [Nm]":40.2,
+    "Tool wear [min]":16
+  },
+  {
+    "Type":"M",
+    "Air temperature [K]":298.3,
+    "Process temperature [K]":308.7,
+    "Rotational speed [rpm]":1667,
+    "Torque [Nm]":28.6,
+    "Tool wear [min]":18
+  },
+  {
+    "Type":"M",
+    "Air temperature [K]":298.5,
+    "Process temperature [K]":309.0,
+    "Rotational speed [rpm]":1741,
+    "Torque [Nm]":28.0,
+    "Tool wear [min]":21
+  },
+  {
+    "Type":"H",
+    "Air temperature [K]":298.4,
+    "Process temperature [K]":308.9,
+    "Rotational speed [rpm]":1782,
+    "Torque [Nm]":23.9,
+    "Tool wear [min]":24
+  },
+  {
+    "Type":"H",
+    "Air temperature [K]":298.6,
+    "Process temperature [K]":309.1,
+    "Rotational speed [rpm]":1423,
+    "Torque [Nm]":44.3,
+    "Tool wear [min]":29
+  },
+  {
+    "Type":"M",
+    "Air temperature [K]":298.6,
+    "Process temperature [K]":309.1,
+    "Rotational speed [rpm]":1339,
+    "Torque [Nm]":51.1,
+    "Tool wear [min]":34
+  },
+  {
+    "Type":"M",
+    "Air temperature [K]":298.6,
+    "Process temperature [K]":309.2,
+    "Rotational speed [rpm]":1742,
+    "Torque [Nm]":30.0,
+    "Tool wear [min]":37
+  },
+  {
+    "Type":"L",
+    "Air temperature [K]":298.6,
+    "Process temperature [K]":309.2,
+    "Rotational speed [rpm]":2035,
+    "Torque [Nm]":19.6,
+    "Tool wear [min]":40
+  },
+  {
+    "Type":"L",
+    "Air temperature [K]":298.6,
+    "Process temperature [K]":309.2,
+    "Rotational speed [rpm]":1542,
+    "Torque [Nm]":48.4,
+    "Tool wear [min]":42
+  },
+  {
+    "Type":"M",
+    "Air temperature [K]":298.6,
+    "Process temperature [K]":309.2,
+    "Rotational speed [rpm]":1311,
+    "Torque [Nm]":46.6,
+    "Tool wear [min]":44
+  },
+  {
+    "Type":"M",
+    "Air temperature [K]":298.7,
+    "Process temperature [K]":309.2,
+    "Rotational speed [rpm]":1410,
+    "Torque [Nm]":45.6,
+    "Tool wear [min]":47
+  },
+  {
+    "Type":"H",
+    "Air temperature [K]":298.8,
+    "Process temperature [K]":309.2,
+    "Rotational speed [rpm]":1306,
+    "Torque [Nm]":54.5,
+    "Tool wear [min]":50
+  },
+  {
+    "Type":"M",
+    "Air temperature [K]":298.9,
+    "Process temperature [K]":309.3,
+    "Rotational speed [rpm]":1632,
+    "Torque [Nm]":32.5,
+    "Tool wear [min]":55
+  },
+  {
+    "Type":"H",
+    "Air temperature [K]":298.9,
+    "Process temperature [K]":309.3,
+    "Rotational speed [rpm]":1375,
+    "Torque [Nm]":42.7,
+    "Tool wear [min]":58
+  },
+  {
+    "Type":"L",
+    "Air temperature [K]":298.8,
+    "Process temperature [K]":309.3,
+    "Rotational speed [rpm]":1450,
+    "Torque [Nm]":44.8,
+    "Tool wear [min]":63
+  },
+  {
+    "Type":"M",
+    "Air temperature [K]":298.9,
+    "Process temperature [K]":309.3,
+    "Rotational speed [rpm]":1581,
+    "Torque [Nm]":30.7,
+    "Tool wear [min]":65
+  },
+  {
+    "Type":"L",
+    "Air temperature [K]":299.0,
+    "Process temperature [K]":309.4,
+    "Rotational speed [rpm]":1758,
+    "Torque [Nm]":25.7,
+    "Tool wear [min]":68
+  },
+  {
+    "Type":"M",
+    "Air temperature [K]":299.0,
+    "Process temperature [K]":309.4,
+    "Rotational speed [rpm]":1561,
+    "Torque [Nm]":37.3,
+    "Tool wear [min]":70
+  },
+  {
+    "Type":"L",
+    "Air temperature [K]":299.0,
+    "Process temperature [K]":309.5,
+    "Rotational speed [rpm]":1861,
+    "Torque [Nm]":23.3,
+    "Tool wear [min]":73
+  },
+  {
+    "Type":"L",
+    "Air temperature [K]":299.1,
+    "Process temperature [K]":309.5,
+    "Rotational speed [rpm]":1512,
+    "Torque [Nm]":39.0,
+    "Tool wear [min]":75
+  },
+  {
+    "Type":"H",
+    "Air temperature [K]":299.1,
+    "Process temperature [K]":309.4,
+    "Rotational speed [rpm]":1811,
+    "Torque [Nm]":24.6,
+    "Tool wear [min]":77
+  },
+  {
+    "Type":"L",
+    "Air temperature [K]":299.1,
+    "Process temperature [K]":309.4,
+    "Rotational speed [rpm]":1439,
+    "Torque [Nm]":44.2,
+    "Tool wear [min]":82
+  },
+  {
+    "Type":"L",
+    "Air temperature [K]":299.0,
+    "Process temperature [K]":309.4,
+    "Rotational speed [rpm]":1693,
+    "Torque [Nm]":30.1,
+    "Tool wear [min]":84
+  },
+  {
+    "Type":"M",
+    "Air temperature [K]":299.1,
+    "Process temperature [K]":309.5,
+    "Rotational speed [rpm]":1339,
+    "Torque [Nm]":48.2,
+    "Tool wear [min]":86
+  },
+  {
+    "Type":"L",
+    "Air temperature [K]":299.0,
+    "Process temperature [K]":309.4,
+    "Rotational speed [rpm]":1798,
+    "Torque [Nm]":25.5,
+    "Tool wear [min]":89
+  },
+  {
+    "Type":"L",
+    "Air temperature [K]":299.0,
+    "Process temperature [K]":309.4,
+    "Rotational speed [rpm]":1419,
+    "Torque [Nm]":48.3,
+    "Tool wear [min]":91
+  },
+  {
+    "Type":"L",
+    "Air temperature [K]":298.9,
+    "Process temperature [K]":309.3,
+    "Rotational speed [rpm]":1665,
+    "Torque [Nm]":32.5,
+    "Tool wear [min]":93
+  },
+  {
+    "Type":"M",
+    "Air temperature [K]":298.8,
+    "Process temperature [K]":309.1,
+    "Rotational speed [rpm]":1559,
+    "Torque [Nm]":34.7,
+    "Tool wear [min]":95
+  },
+  {
+    "Type":"M",
+    "Air temperature [K]":298.8,
+    "Process temperature [K]":309.2,
+    "Rotational speed [rpm]":1452,
+    "Torque [Nm]":48.6,
+    "Tool wear [min]":98
+  },
+  {
+    "Type":"M",
+    "Air temperature [K]":298.9,
+    "Process temperature [K]":309.2,
+    "Rotational speed [rpm]":1581,
+    "Torque [Nm]":36.7,
+    "Tool wear [min]":101
+  },
+  {
+    "Type":"L",
+    "Air temperature [K]":298.8,
+    "Process temperature [K]":309.1,
+    "Rotational speed [rpm]":1439,
+    "Torque [Nm]":39.2,
+    "Tool wear [min]":104
+  },
+  {
+    "Type":"H",
+    "Air temperature [K]":298.9,
+    "Process temperature [K]":309.2,
+    "Rotational speed [rpm]":1379,
+    "Torque [Nm]":50.7,
+    "Tool wear [min]":106
+  },
+  {
+    "Type":"L",
+    "Air temperature [K]":298.8,
+    "Process temperature [K]":309.1,
+    "Rotational speed [rpm]":1350,
+    "Torque [Nm]":52.5,
+    "Tool wear [min]":111
+  },
+  {
+    "Type":"L",
+    "Air temperature [K]":298.8,
+    "Process temperature [K]":309.1,
+    "Rotational speed [rpm]":1362,
+    "Torque [Nm]":45.4,
+    "Tool wear [min]":113
+  },
+  {
+    "Type":"L",
+    "Air temperature [K]":298.8,
+    "Process temperature [K]":309.1,
+    "Rotational speed [rpm]":1368,
+    "Torque [Nm]":50.8,
+    "Tool wear [min]":115
+  },
+  {
+    "Type":"M",
+    "Air temperature [K]":298.8,
+    "Process temperature [K]":309.1,
+    "Rotational speed [rpm]":1368,
+    "Torque [Nm]":49.1,
+    "Tool wear [min]":117
+  },
+  {
+    "Type":"H",
+    "Air temperature [K]":298.8,
+    "Process temperature [K]":309.2,
+    "Rotational speed [rpm]":1372,
+    "Torque [Nm]":48.5,
+    "Tool wear [min]":120
+  },
+  {
+    "Type":"M",
+    "Air temperature [K]":298.8,
+    "Process temperature [K]":309.1,
+    "Rotational speed [rpm]":1472,
+    "Torque [Nm]":47.5,
+    "Tool wear [min]":125
+  },
+  {
+    "Type":"L",
+    "Air temperature [K]":298.8,
+    "Process temperature [K]":309.1,
+    "Rotational speed [rpm]":1489,
+    "Torque [Nm]":49.1,
+    "Tool wear [min]":128
+  },
+  {
+    "Type":"M",
+    "Air temperature [K]":298.7,
+    "Process temperature [K]":309.0,
+    "Rotational speed [rpm]":1843,
+    "Torque [Nm]":25.8,
+    "Tool wear [min]":130
+  },
+  {
+    "Type":"L",
+    "Air temperature [K]":298.8,
+    "Process temperature [K]":309.1,
+    "Rotational speed [rpm]":1418,
+    "Torque [Nm]":46.3,
+    "Tool wear [min]":133
+  },
+  {
+    "Type":"H",
+    "Air temperature [K]":298.8,
+    "Process temperature [K]":309.2,
+    "Rotational speed [rpm]":1425,
+    "Torque [Nm]":53.9,
+    "Tool wear [min]":135
+  },
+  {
+    "Type":"M",
+    "Air temperature [K]":298.9,
+    "Process temperature [K]":309.2,
+    "Rotational speed [rpm]":1412,
+    "Torque [Nm]":44.1,
+    "Tool wear [min]":140
+  },
+  {
+    "Type":"L",
+    "Air temperature [K]":298.9,
+    "Process temperature [K]":309.1,
+    "Rotational speed [rpm]":2861,
+    "Torque [Nm]":4.6,
+    "Tool wear [min]":143
+  },
+  {
+    "Type":"L",
+    "Air temperature [K]":298.9,
+    "Process temperature [K]":309.1,
+    "Rotational speed [rpm]":1383,
+    "Torque [Nm]":54.9,
+    "Tool wear [min]":145
+  },
+  {
+    "Type":"H",
+    "Air temperature [K]":298.8,
+    "Process temperature [K]":309.0,
+    "Rotational speed [rpm]":1497,
+    "Torque [Nm]":43.8,
+    "Tool wear [min]":147
+  },
+  {
+    "Type":"L",
+    "Air temperature [K]":298.7,
+    "Process temperature [K]":309.0,
+    "Rotational speed [rpm]":1565,
+    "Torque [Nm]":35.1,
+    "Tool wear [min]":152
+  },
+  {
+    "Type":"L",
+    "Air temperature [K]":298.7,
+    "Process temperature [K]":309.0,
+    "Rotational speed [rpm]":1691,
+    "Torque [Nm]":30.1,
+    "Tool wear [min]":154
+  },
+  {
+    "Type":"L",
+    "Air temperature [K]":298.8,
+    "Process temperature [K]":309.1,
+    "Rotational speed [rpm]":1512,
+    "Torque [Nm]":40.7,
+    "Tool wear [min]":156
+  },
+  {
+    "Type":"L",
+    "Air temperature [K]":298.8,
+    "Process temperature [K]":309.1,
+    "Rotational speed [rpm]":1477,
+    "Torque [Nm]":42.4,
+    "Tool wear [min]":158
+  },
+  {
+    "Type":"L",
+    "Air temperature [K]":298.8,
+    "Process temperature [K]":309.1,
+    "Rotational speed [rpm]":1513,
+    "Torque [Nm]":40.3,
+    "Tool wear [min]":160
+  },
+  {
+    "Type":"M",
+    "Air temperature [K]":298.8,
+    "Process temperature [K]":309.0,
+    "Rotational speed [rpm]":1661,
+    "Torque [Nm]":29.5,
+    "Tool wear [min]":162
+  },
+  {
+    "Type":"L",
+    "Air temperature [K]":298.8,
+    "Process temperature [K]":309.1,
+    "Rotational speed [rpm]":1378,
+    "Torque [Nm]":54.4,
+    "Tool wear [min]":165
+  }
+]

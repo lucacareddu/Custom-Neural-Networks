@@ -4,11 +4,15 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+torch = {file = "https://download.pytorch.org/whl/cu118/torch-2.1.2%2Bcu118-cp310-cp310-linux_x86_64.whl#sha256=60396358193f238888540f4a38d78485f161e28ec17fa445f0373b5350ef21f0"}
+fastapi = "==0.128.0"
 matplotlib = "==3.5.1"
+mlflow = "==3.0.0"
 numpy = "==1.23.5"
 pandas = "==1.3.5"
+prefect = "==3.6.15"
 seaborn = "==0.12.0"
-torch = {file = "https://download.pytorch.org/whl/cu118/torch-2.1.2%2Bcu118-cp310-cp310-linux_x86_64.whl#sha256=60396358193f238888540f4a38d78485f161e28ec17fa445f0373b5350ef21f0"}
+uvicorn = "==0.40.0"
 
 [dev-packages]
 

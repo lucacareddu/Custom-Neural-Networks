@@ -1,0 +1,11 @@
+FROM python:3.10.12-slim
+
+WORKDIR /prefectserver
+
+RUN pip install -U pip
+
+RUN pip install prefect==3.6.15
+
+EXPOSE 4002
+
+ENTRYPOINT ["prefect", "server", "start"]
