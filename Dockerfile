@@ -7,6 +7,6 @@ COPY [ "Pipfile", "Pipfile.lock", "./" ]
 
 RUN pipenv install --system --deploy
 
-COPY [ "lambda_function.py", "custom_rul_prediction.py", "./" ]
+COPY [ "lambda_function.py", "custom_rul_prediction.py", "mlflow.db", "./" ]
 
 CMD [ "lambda_function.lambda_handler" ]

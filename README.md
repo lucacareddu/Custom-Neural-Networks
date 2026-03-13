@@ -28,7 +28,7 @@ echo ${RESULT} | jq -r '.Records[0].Data' | base64 --decode
 
 docker build --provenance false -t lambdainfer:v1 .
 
-docker run -it --rm -e AWS_ACCESS_KEY_ID= -e AWS_SECRET_ACCESS_KEY= -e AWS_DEFAULT_REGION=eu-north-1 -p 8080:8080 lambdainfer:v1
+docker run -it --rm -e AWS_ACCESS_KEY_ID= -e AWS_SECRET_ACCESS_KEY=ptCtOS9lHk6Ky/2xmKbDPEmj7Ol810C3farLU2jv -e AWS_DEFAULT_REGION=eu-north-1 -p 8080:8080 lambdainfer:v1
 
 
 ## ECR

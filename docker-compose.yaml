@@ -1,0 +1,14 @@
+services:
+  infer:
+    build: .
+    image: lambdainfer:v1
+    ports:
+      - "8080:8080"
+    volumes:
+      - /home/luca/infer2_test/mlruns:/home/luca/infer2_test/mlruns
+  # kinesis:.
+  #   image: localstack/localstack
+  #   ports:
+  #     - "4566:4566"
+  #   environment:
+  #     - SERVICES=kinesis

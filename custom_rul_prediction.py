@@ -60,16 +60,16 @@ def set_deterministic(seed=42):
 def setup_mlflow():
     os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
-    os.environ["AWS_ACCESS_KEY_ID"] = ""
-    os.environ["AWS_SECRET_ACCESS_KEY"] = ""
-    os.environ["AWS_DEFAULT_REGION"] = "eu-north-1"
+    # os.environ["AWS_ACCESS_KEY_ID"] = ""
+    # os.environ["AWS_SECRET_ACCESS_KEY"] = ""
+    # os.environ["AWS_DEFAULT_REGION"] = "eu-north-1"
 
     logger = logging.getLogger("mlflow")
 
     # Set log level to *
     logger.setLevel(logging.ERROR)
 
-    mlflow.set_tracking_uri("http://ec2-13-53-42-1.eu-north-1.compute.amazonaws.com:5000/")
+    mlflow.set_tracking_uri("sqlite:///mlflow.db")
     mlflow.set_experiment("RUL Estimation Demo")
 
 # -------- Data --------
