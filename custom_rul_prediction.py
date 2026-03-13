@@ -24,7 +24,7 @@ import seaborn as sns
 import mlflow
 from mlflow.models.signature import infer_signature
 
-os.environ['PREFECT_API_URL'] = 'https://api.prefect.cloud/api/accounts/c7028478-dda8-4b64-a8d3-7e8383dc318e/workspaces/b9b5c507-4bf8-4416-8992-9f530269caa8'
+os.environ['PREFECT_API_URL'] = ''
 os.environ['PREFECT_API_KEY'] = ''
 from prefect import task, flow
 
@@ -69,7 +69,7 @@ def setup_mlflow():
     # Set log level to *
     logger.setLevel(logging.ERROR)
 
-    mlflow.set_tracking_uri("http://ec2-16-16-206-77.eu-north-1.compute.amazonaws.com:5000/")
+    mlflow.set_tracking_uri("http://ec2-13-53-42-1.eu-north-1.compute.amazonaws.com:5000/")
     mlflow.set_experiment("RUL Estimation Demo")
 
 # -------- Data --------
